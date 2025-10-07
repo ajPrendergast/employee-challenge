@@ -159,7 +159,7 @@ public class EmployeeController implements IEmployeeController<Employee, CreateE
     public ResponseEntity<Employee> createEmployee(CreateEmployeeInput employeeInput) {
         log.info("POST /api/v1/employee - Creating a new employee");
 
-        if (employeeInput.getName() != null && !employeeInput.getName().matches(NAME_SEARCH_PATTERN)) {
+        if (employeeInput.getName() != null && !employeeInput.getName().matches(NAME_PATTERN)) {
             log.warn("Invalid employee name format: {}", employeeInput.getName());
             return ResponseEntity.badRequest().build();
         }

@@ -155,7 +155,7 @@ public class EmployeeService {
 
             Employee createdEmployee = response.getData().toEmployee();
             log.info("Successfully created employee with id: {}", createdEmployee.getId());
-            evictEmployeeCache();
+            self.evictEmployeeCache();
             return createdEmployee;
         } catch (HttpClientErrorException.TooManyRequests e) {
             log.warn("Rate limit hit (429) while creating employee - retry will be attempted");
@@ -185,7 +185,7 @@ public class EmployeeService {
                 throw new IllegalStateException("Employee not found with id: " + id);
             }
 
-            String employeeName = response.getData().getName();
+            String employeeName = response.getData().toEmployee().getName();
 
             var deleteRequest = new HashMap<String, String>();
             deleteRequest.put("name", employeeName);
@@ -197,7 +197,7 @@ public class EmployeeService {
                     .retrieve()
                     .toBodilessEntity();
             log.info("Successfully deleted employee with id: {}", id);
-            evictEmployeeCache();
+            self.evictEmployeeCache();
             return employeeName;
         } catch (HttpClientErrorException.TooManyRequests e) {
             log.warn("Rate limit hit (429) while deleting employee - retry will be attempted");
