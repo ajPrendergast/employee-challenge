@@ -175,15 +175,26 @@ public class EmployeeService {
     }
 
     @RetryableApiCall
-    public void deleteEmployeeById(String id) {
+    public String deleteEmployeeById(String id) {
         log.info("Attempting to delete employee with id: {}", id);
 
-        Employee employee = getEmployeeById(id);
-
-        var deleteRequest = new HashMap<String, String>();
-        deleteRequest.put("name", employee.getName());
-
         try {
+            EmployeeApiResponse<MockEmployeeDto> response = restClient
+                    .get()
+                    .uri("/api/v1/employee/{id}", id)
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<EmployeeApiResponse<MockEmployeeDto>>() {});
+
+            if (response == null || response.getData() == null) {
+                log.warn("Employee not found with id: {}", id);
+                throw new IllegalStateException("Employee not found with id: " + id);
+            }
+
+            String employeeName = response.getData().getName();
+
+            var deleteRequest = new HashMap<String, String>();
+            deleteRequest.put("name", employeeName);
+
             restClient
                     .method(org.springframework.http.HttpMethod.DELETE)
                     .uri("/api/v1/employee")
@@ -192,6 +203,7 @@ public class EmployeeService {
                     .toBodilessEntity();
             log.info("Successfully deleted employee with id: {}", id);
             evictEmployeeCache();
+            return employeeName;
         } catch (HttpClientErrorException.TooManyRequests e) {
             log.warn("Rate limit hit (429) while deleting employee - retry will be attempted");
             throw e;
@@ -205,7 +217,7 @@ public class EmployeeService {
     }
 
     @Recover
-    public void recoverDeleteEmployeeById(HttpClientErrorException.TooManyRequests e, String id) {
+    public String recoverDeleteEmployeeById(HttpClientErrorException.TooManyRequests e, String id) {
         log.error("Failed to delete employee after all retry attempts - rate limit still active");
         throw e;
     }
