@@ -169,7 +169,6 @@ public class EmployeeService {
         throw e;
     }
 
-    @RetryableApiCall
     public String deleteEmployeeById(String id) {
         log.info("Attempting to delete employee with id: {}", id);
 
@@ -181,38 +180,36 @@ public class EmployeeService {
                     .body(new ParameterizedTypeReference<EmployeeApiResponse<MockEmployeeDto>>() {});
 
             if (response == null || response.getData() == null) {
-                log.warn("Employee not found with id: {}", id);
-                throw new IllegalStateException("Employee not found with id: " + id);
+                log.warn("Employee does not exist with id: {}", id);
+                throw new IllegalStateException("Employee does not exist");
             }
 
             String employeeName = response.getData().toEmployee().getName();
-
-            var deleteRequest = new HashMap<String, String>();
-            deleteRequest.put("name", employeeName);
-
-            restClient
-                    .method(org.springframework.http.HttpMethod.DELETE)
-                    .uri("/api/v1/employee")
-                    .body(deleteRequest)
-                    .retrieve()
-                    .toBodilessEntity();
-            log.info("Successfully deleted employee with id: {}", id);
-            self.evictEmployeeCache();
-            return employeeName;
-        } catch (HttpClientErrorException.TooManyRequests e) {
-            log.warn("Rate limit hit (429) while deleting employee - retry will be attempted");
-            throw e;
+            return self.performDelete(employeeName, id);
         } catch (HttpClientErrorException.NotFound e) {
-            log.warn("Employee not found with id: {}", id);
-            throw new IllegalStateException("Employee not found with id: " + id, e);
-        } catch (HttpClientErrorException e) {
-            log.error("HTTP error deleting employee with id {}: {} {}", id, e.getStatusCode(), e.getMessage());
-            throw e;
+            log.warn("Employee does not exist with id: {}", id);
+            throw new IllegalStateException("Employee does not exist", e);
         }
     }
 
+    @RetryableApiCall
+    String performDelete(String employeeName, String id) {
+        var deleteRequest = new HashMap<String, String>();
+        deleteRequest.put("name", employeeName);
+
+        restClient
+                .method(org.springframework.http.HttpMethod.DELETE)
+                .uri("/api/v1/employee")
+                .body(deleteRequest)
+                .retrieve()
+                .toBodilessEntity();
+        log.info("Successfully deleted employee with id: {}", id);
+        self.evictEmployeeCache();
+        return employeeName;
+    }
+
     @Recover
-    public String recoverDeleteEmployeeById(HttpClientErrorException.TooManyRequests e, String id) {
+    String recoverPerformDelete(HttpClientErrorException.TooManyRequests e, String employeeName, String id) {
         log.error("Failed to delete employee after all retry attempts - rate limit still active");
         throw e;
     }
