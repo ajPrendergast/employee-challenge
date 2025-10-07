@@ -3,6 +3,11 @@ plugins {
 }
 
 dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-cache'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.retry:spring-retry'
+    implementation 'org.springframework:spring-aspects'
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
 
