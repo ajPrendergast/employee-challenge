@@ -73,46 +73,41 @@ public class EmployeeService {
         log.info("Fetching employee by ID: {}", id);
 
         try {
-            EmployeeApiResponse<MockEmployeeDto> response = restClient
-                    .get()
-                    .uri("/api/v1/employee/{id}", id)
-                    .retrieve()
-                    .body(new ParameterizedTypeReference<EmployeeApiResponse<MockEmployeeDto>>() {});
-
-            if (response == null || response.getData() == null) {
-                log.warn("Received null response for employee ID: {}", id);
-                throw new IllegalArgumentException("Employee not found with id: " + id);
-            }
-
-            Employee employee = response.getData().toEmployee();
-            log.info("Successfully fetched employee: {}", employee.getName());
-            return employee;
+            return fetchEmployeeByIdFromApi(id);
         } catch (HttpClientErrorException e) {
-            if (e.getStatusCode() == HttpStatus.TOO_MANY_REQUESTS) {
-                log.warn("Rate limit hit when fetching employee by ID - falling back to cached list");
-            }
-            // Fallback: search in cached employee list
-            try {
-                List<Employee> cachedEmployees = self.getAllEmployees();
-                log.info("Searching for employee {} in cache with {} employees", id, cachedEmployees.size());
-                return cachedEmployees.stream()
-                        .filter(emp -> emp.getId().toString().equals(id))
-                        .findFirst()
-                        .orElseThrow(() -> {
-                            log.warn(
-                                    "Employee {} not found in cached list of {} employees", id, cachedEmployees.size());
-                            return new IllegalArgumentException("Employee not found with id: " + id);
-                        });
-            } catch (IllegalArgumentException notFound) {
-                // Employee not in cache - this is expected, just re-throw
-                throw notFound;
-            } catch (Exception cacheException) {
-                // Cache itself failed - this is unexpected
-                log.error("Failed to access employee cache: {}", cacheException.getMessage());
-                throw new IllegalArgumentException(
-                        "Employee not found with id: " + id + " (cache unavailable)", cacheException);
-            }
+            log.warn("API error fetching employee by ID ({}), falling back to cache", e.getStatusCode());
+            return findEmployeeInCache(id);
         }
+    }
+
+    private Employee fetchEmployeeByIdFromApi(String id) {
+        EmployeeApiResponse<MockEmployeeDto> response = restClient
+                .get()
+                .uri("/api/v1/employee/{id}", id)
+                .retrieve()
+                .body(new ParameterizedTypeReference<EmployeeApiResponse<MockEmployeeDto>>() {});
+
+        if (response == null || response.getData() == null) {
+            log.warn("Received null response for employee ID: {}", id);
+            throw new IllegalArgumentException("Employee not found with id: " + id);
+        }
+
+        Employee employee = response.getData().toEmployee();
+        log.info("Successfully fetched employee: {}", employee.getName());
+        return employee;
+    }
+
+    private Employee findEmployeeInCache(String id) {
+        List<Employee> cachedEmployees = self.getAllEmployees();
+        log.info("Searching for employee {} in cache with {} employees", id, cachedEmployees.size());
+
+        return cachedEmployees.stream()
+                .filter(emp -> emp.getId().toString().equals(id))
+                .findFirst()
+                .orElseThrow(() -> {
+                    log.warn("Employee {} not found in cached list of {} employees", id, cachedEmployees.size());
+                    return new IllegalArgumentException("Employee not found with id: " + id);
+                });
     }
 
     public Integer getHighestSalaryOfEmployees() {
