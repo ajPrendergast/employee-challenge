@@ -647,12 +647,13 @@ class EmployeeControllerTest {
     void deleteEmployeeById_shouldReturnSuccessMessage() throws Exception {
         // Arrange
         String employeeId = UUID.randomUUID().toString();
-        doNothing().when(employeeService).deleteEmployeeById(employeeId);
+        String employeeName = "John Doe";
+        when(employeeService.deleteEmployeeById(employeeId)).thenReturn(employeeName);
 
         // Act & Assert
         mockMvc.perform(delete("/api/v1/employee/" + employeeId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").value("Employee deleted successfully"));
+                .andExpect(jsonPath("$").value(employeeName));
 
         verify(employeeService, times(1)).deleteEmployeeById(employeeId);
     }

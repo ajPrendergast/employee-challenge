@@ -13,7 +13,6 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpStatus;
 import org.springframework.retry.annotation.Recover;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
@@ -44,6 +43,10 @@ public class EmployeeService {
                     .retrieve()
                     .body(new ParameterizedTypeReference<EmployeeApiResponse<List<MockEmployeeDto>>>() {});
 
+            if (response == null || response.getData() == null) {
+                log.warn("Received null response or data when fetching employees");
+                return List.of();
+            }
 
             List<Employee> employees =
                     response.getData().stream().map(MockEmployeeDto::toEmployee).toList();
