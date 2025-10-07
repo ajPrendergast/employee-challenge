@@ -205,9 +205,9 @@ public class EmployeeController implements IEmployeeController<Employee, CreateE
         }
 
         try {
-            employeeService.deleteEmployeeById(id);
+            String deletedEmployeeName = employeeService.deleteEmployeeById(id);
             log.info("Successfully deleted employee with id: {}", id);
-            return ResponseEntity.ok("Employee deleted successfully");
+            return ResponseEntity.ok(deletedEmployeeName);
         } catch (IllegalStateException e) {
             log.warn("Employee not found with id: {}", id);
             return ResponseEntity.notFound().build();
